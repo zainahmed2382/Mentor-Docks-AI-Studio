@@ -131,6 +131,10 @@ const anonymousProjects: any[] = [
 
 const anonymousScans: any[] = [];
 
+// In-memory user store — used as a full auth fallback when DATABASE_URL is not set
+const inMemoryUsers: Array<{ id: number; email: string; password: string; name: string }> = [];
+let inMemoryUserIdCounter = 1;
+
 // Authentication Middleware
 function authenticateToken(req: any, res: any, next: any) {
   const authHeader = req.headers["authorization"];
@@ -202,7 +206,19 @@ app.post("/api/auth/signup", async (req: any, res: any) => {
         user: { id: user.id, email: user.email, name: user.name || user.email.split("@")[0] }
       });
     } else {
-      return res.status(400).json({ error: "Database not available for registration. In-memory mode active." });
+      // --- In-memory fallback auth (no database) ---
+      const existing = inMemoryUsers.find((u) => u.email === email);
+      if (existing) {
+        return res.status(400).json({ error: "Email is already registered" });
+      }
+      const newUser = { id: inMemoryUserIdCounter++, email, password: hashedPassword, name: name || email.split("@")[0] };
+      inMemoryUsers.push(newUser);
+      const token = jwt.sign({ userId: newUser.id, email: newUser.email }, JWT_SECRET, { expiresIn: "7d" });
+      console.log(`[In-Memory Auth] New user registered: ${email}`);
+      return res.status(201).json({
+        token,
+        user: { id: newUser.id, email: newUser.email, name: newUser.name }
+      });
     }
   } catch (err: any) {
     console.error("Signup error:", err);
@@ -239,7 +255,21 @@ app.post("/api/auth/login", async (req: any, res: any) => {
         user: { id: user.id, email: user.email, name: user.name || user.email.split("@")[0] }
       });
     } else {
-      return res.status(400).json({ error: "Database connection is not configured." });
+      // --- In-memory fallback auth (no database) ---
+      const user = inMemoryUsers.find((u) => u.email === email);
+      if (!user) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+      const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
+      console.log(`[In-Memory Auth] User logged in: ${email}`);
+      return res.json({
+        token,
+        user: { id: user.id, email: user.email, name: user.name }
+      });
     }
   } catch (err: any) {
     console.error("Login error:", err);
@@ -258,7 +288,12 @@ app.get("/api/auth/me", authenticateToken, async (req: any, res: any) => {
       const user = result.rows[0];
       return res.json({ user: { id: user.id, email: user.email, name: user.name || user.email.split("@")[0] } });
     } else {
-      return res.status(404).json({ error: "Database not available" });
+      // --- In-memory fallback ---
+      const user = inMemoryUsers.find((u) => u.id === req.user.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      return res.json({ user: { id: user.id, email: user.email, name: user.name } });
     }
   } catch (err: any) {
     console.error("Me endpoint error:", err);
