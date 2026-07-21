@@ -12,6 +12,14 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
+// Debug middleware for API requests
+app.use((req, res, next) => {
+  if (req.url.startsWith("/api/")) {
+    console.log(`[API] ${req.method} ${req.url}`);
+  }
+  next();
+});
+
 const PORT = 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "super_secret_jwt_sign_key_123456789";
 
@@ -828,21 +836,11 @@ async function startServer() {
       server: { middlewareMode: true },
       appType: "spa",
     });
-    // Skip API routes for Vite middleware
-    app.use((req, res, next) => {
-      if (req.url.startsWith("/api/")) {
-        return next();
-      }
-      vite.middlewares(req, res, next);
-    });
+    app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    // Catch-all for SPA - but skip API routes
     app.get("*", (req: any, res: any) => {
-      if (req.url.startsWith("/api/")) {
-        return res.status(404).json({ error: "API endpoint not found" });
-      }
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
