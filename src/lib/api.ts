@@ -1,6 +1,7 @@
 import { WebsiteScan } from "../types";
 
 const TOKEN_KEY = "mentor_auth_token";
+const API_BASE = ((import.meta as any).env?.VITE_API_URL as string) || "";
 
 // Safe JSON parser: avoids the "Unexpected token" crash when the server
 // returns an HTML error page instead of JSON (e.g. backend not running).
@@ -48,7 +49,7 @@ const getHeaders = () => {
 export const api = {
   // Authentication
   async signup(email: string, password: string, name: string): Promise<AuthResponse> {
-    const response = await fetch("/api/auth/signup", {
+    const response = await fetch(`${API_BASE}/api/auth/signup`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password, name }),
@@ -62,7 +63,7 @@ export const api = {
   },
 
   async login(email: string, password: string): Promise<AuthResponse> {
-    const response = await fetch("/api/auth/login", {
+    const response = await fetch(`${API_BASE}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -80,7 +81,7 @@ export const api = {
     if (!token) return null;
 
     try {
-      const response = await fetch("/api/auth/me", {
+      const response = await fetch(`${API_BASE}/api/auth/me`, {
         method: "GET",
         headers: getHeaders(),
       });
@@ -102,7 +103,7 @@ export const api = {
 
   // Projects
   async getProjects(): Promise<any[]> {
-    const response = await fetch("/api/projects", {
+    const response = await fetch(`${API_BASE}/api/projects`, {
       method: "GET",
       headers: getHeaders(),
     });
@@ -120,7 +121,7 @@ export const api = {
     issues: number;
     category: string;
   }): Promise<any> {
-    const response = await fetch("/api/projects", {
+    const response = await fetch(`${API_BASE}/api/projects`, {
       method: "POST",
       headers: getHeaders(),
       body: JSON.stringify(project),
@@ -133,7 +134,7 @@ export const api = {
 
   // Scans
   async getScans(): Promise<WebsiteScan[]> {
-    const response = await fetch("/api/scans", {
+    const response = await fetch(`${API_BASE}/api/scans`, {
       method: "GET",
       headers: getHeaders(),
     });
@@ -144,7 +145,7 @@ export const api = {
   },
 
   async saveScan(scan: Omit<WebsiteScan, "id" | "status">): Promise<WebsiteScan> {
-    const response = await fetch("/api/scans", {
+    const response = await fetch(`${API_BASE}/api/scans`, {
       method: "POST",
       headers: getHeaders(),
       body: JSON.stringify(scan),
@@ -156,7 +157,7 @@ export const api = {
   },
 
   async deleteScan(id: string): Promise<boolean> {
-    const response = await fetch(`/api/scans/${id}`, {
+    const response = await fetch(`${API_BASE}/api/scans/${id}`, {
       method: "DELETE",
       headers: getHeaders(),
     });
@@ -164,7 +165,7 @@ export const api = {
   },
 
   async analyzeUrl(url: string): Promise<WebsiteScan> {
-    const response = await fetch("/api/scans/analyze", {
+    const response = await fetch(`${API_BASE}/api/scans/analyze`, {
       method: "POST",
       headers: getHeaders(),
       body: JSON.stringify({ url }),
