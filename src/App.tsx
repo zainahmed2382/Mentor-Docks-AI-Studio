@@ -531,11 +531,6 @@ export default function App() {
               <Globe className="h-3 w-3 text-indigo-500" />
               <span>Mentor Artificial Intelligence</span>
             </div>
-            <div className="flex items-center gap-1">
-              <span>Handcrafted with</span>
-              <Heart className="h-3 w-3 text-red-500 fill-red-500" />
-              <span>for expert designers worldwide.</span>
-            </div>
           </div>
         </footer>
       )}
