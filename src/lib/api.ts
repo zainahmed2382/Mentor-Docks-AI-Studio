@@ -2,6 +2,21 @@ import { WebsiteScan } from "../types";
 
 const TOKEN_KEY = "mentor_auth_token";
 
+// Safe JSON parser: avoids the "Unexpected token" crash when the server
+// returns an HTML error page instead of JSON (e.g. backend not running).
+async function safeJson(response: Response): Promise<any> {
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    const text = await response.text();
+    // Provide a clear, readable error instead of a JSON parse crash
+    if (response.status === 404) {
+      throw new Error("API endpoint not found. Make sure the backend server is running.");
+    }
+    throw new Error(`Server error (${response.status}): ${text.slice(0, 120)}`);
+  }
+  return response.json();
+}
+
 export interface User {
   id: number;
   email: string;
@@ -38,7 +53,7 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password, name }),
     });
-    const data = await response.json();
+    const data = await safeJson(response);
     if (!response.ok) {
       throw new Error(data.error || "Failed to sign up");
     }
@@ -52,7 +67,7 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
-    const data = await response.json();
+    const data = await safeJson(response);
     if (!response.ok) {
       throw new Error(data.error || "Failed to log in");
     }
