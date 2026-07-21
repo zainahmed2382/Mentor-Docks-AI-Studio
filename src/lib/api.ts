@@ -109,7 +109,7 @@ export const api = {
     if (!response.ok) {
       throw new Error("Failed to fetch projects");
     }
-    return await response.json();
+    return await safeJson(response);
   },
 
   async saveProject(project: {
@@ -128,7 +128,7 @@ export const api = {
     if (!response.ok) {
       throw new Error("Failed to save project");
     }
-    return await response.json();
+    return await safeJson(response);
   },
 
   // Scans
@@ -140,7 +140,7 @@ export const api = {
     if (!response.ok) {
       throw new Error("Failed to fetch scans");
     }
-    return await response.json();
+    return await safeJson(response);
   },
 
   async saveScan(scan: Omit<WebsiteScan, "id" | "status">): Promise<WebsiteScan> {
@@ -152,7 +152,7 @@ export const api = {
     if (!response.ok) {
       throw new Error("Failed to save scan history");
     }
-    return await response.json();
+    return await safeJson(response);
   },
 
   async deleteScan(id: string): Promise<boolean> {
@@ -169,7 +169,7 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify({ url }),
     });
-    const data = await response.json();
+    const data = await safeJson(response);
     if (!response.ok) {
       throw new Error(data.error || "Failed to analyze website");
     }
