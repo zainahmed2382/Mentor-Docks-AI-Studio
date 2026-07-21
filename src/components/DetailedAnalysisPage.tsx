@@ -15,8 +15,10 @@ import {
   FileCode,
   ArrowRight,
   Sparkles,
-  Zap
+  Zap,
+  FileDown
 } from "lucide-react";
+import { downloadPdfReport } from "../lib/generatePdf";
 
 interface DetailedAnalysisPageProps {
   activeScan: WebsiteScan;
@@ -26,6 +28,15 @@ type AnalyzerTab = "code" | "responsive" | "typography" | "color" | "accessibili
 
 export default function DetailedAnalysisPage({ activeScan }: DetailedAnalysisPageProps) {
   const [activeTab, setActiveTab] = useState<AnalyzerTab>("ux");
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadPdf = () => {
+    setIsDownloading(true);
+    setTimeout(() => {
+      downloadPdfReport(activeScan);
+      setIsDownloading(false);
+    }, 600);
+  };
 
   const analyzers = [
     { id: "ux", label: "UI/UX Heuristics", icon: MousePointerClick, scoreKey: "uiUx" as keyof ScoreMetrics, color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-950/20" },
@@ -158,8 +169,30 @@ export default function DetailedAnalysisPage({ activeScan }: DetailedAnalysisPag
             Inspect individual reports and assertions from all 8 autonomous crawlers.
           </p>
         </div>
-        <div className="font-mono text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 px-4 py-2 rounded-2xl font-bold self-start md:self-auto">
-          Scanned Target: {activeScan.url}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="font-mono text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 px-4 py-2 rounded-2xl font-bold self-start md:self-auto">
+            Scanned Target: {activeScan.url}
+          </div>
+          <motion.button
+            onClick={handleDownloadPdf}
+            disabled={isDownloading}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-sans font-bold text-xs shadow-lg shadow-indigo-500/20 transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed self-start md:self-auto"
+            id="download-pdf-btn"
+          >
+            {isDownloading ? (
+              <>
+                <span className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>Generating...</span>
+              </>
+            ) : (
+              <>
+                <FileDown className="h-3.5 w-3.5" />
+                <span>Download PDF Report</span>
+              </>
+            )}
+          </motion.button>
         </div>
       </div>
 
