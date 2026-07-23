@@ -30,12 +30,15 @@ export default function DetailedAnalysisPage({ activeScan }: DetailedAnalysisPag
   const [activeTab, setActiveTab] = useState<AnalyzerTab>("ux");
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     setIsDownloading(true);
-    setTimeout(() => {
-      downloadPdfReport(activeScan);
+    try {
+      await downloadPdfReport(activeScan);
+    } catch (err) {
+      console.error("Error downloading PDF report:", err);
+    } finally {
       setIsDownloading(false);
-    }, 600);
+    }
   };
 
   const analyzers = [

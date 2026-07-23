@@ -1,3 +1,5 @@
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 import { WebsiteScan } from "../types";
 
 function getScoreColor(score: number): string {
@@ -38,7 +40,7 @@ function buildProgressBar(score: number): string {
   `;
 }
 
-export function downloadPdfReport(scan: WebsiteScan): void {
+export async function downloadPdfReport(scan: WebsiteScan): Promise<void> {
   const metrics = scan.metrics;
   const metricEntries = [
     { label: "UI / UX Heuristics",  score: metrics.uiUx },
@@ -99,338 +101,336 @@ export function downloadPdfReport(scan: WebsiteScan): void {
       </div>
     `).join("");
 
-  const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Mentor Docks — Audit Report · ${scan.url}</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+  const container = document.createElement("div");
+  container.style.position = "fixed";
+  container.style.left = "-9999px";
+  container.style.top = "0";
+  container.style.width = "794px";
+  container.style.background = "#ffffff";
+  container.style.zIndex = "-9999";
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+  container.innerHTML = `
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-    body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: #ffffff;
-      color: #1f2937;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    @page {
-      size: A4;
-      margin: 0;
-    }
+      .pdf-root {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        background: #ffffff;
+        color: #1f2937;
+        padding: 40px 44px;
+        width: 794px;
+      }
 
-    @media print {
-      body { margin: 0; }
-      .no-print { display: none !important; }
-    }
+      /* ─── HEADER ─── */
+      .header {
+        background: linear-gradient(135deg, #0f0f1a 0%, #1e1b4b 50%, #0f172a 100%);
+        border-radius: 20px;
+        padding: 32px 36px;
+        margin-bottom: 28px;
+        position: relative;
+        overflow: hidden;
+      }
+      .header::before {
+        content: '';
+        position: absolute;
+        top: -40px; right: -40px;
+        width: 200px; height: 200px;
+        background: radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%);
+        border-radius: 50%;
+      }
+      .header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 20px;
+      }
+      .brand {
+        display: flex; align-items: center; gap: 10px;
+      }
+      .brand-icon {
+        width: 36px; height: 36px;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .brand-name {
+        font-size: 15px; font-weight: 800;
+        color: white; letter-spacing: -0.02em;
+      }
+      .brand-sub {
+        font-size: 10px; font-weight: 500;
+        color: rgba(255,255,255,0.5);
+        text-transform: uppercase; letter-spacing: 0.08em;
+      }
+      .score-badge {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 16px;
+        padding: 12px 20px;
+        text-align: center;
+      }
+      .score-number {
+        font-size: 36px; font-weight: 900; color: ${overallColor};
+        line-height: 1;
+      }
+      .score-label {
+        font-size: 10px; font-weight: 700;
+        color: rgba(255,255,255,0.5);
+        text-transform: uppercase; letter-spacing: 0.1em;
+        margin-top: 4px;
+      }
+      .score-grade {
+        font-size: 11px; font-weight: 700;
+        color: ${overallColor};
+        margin-top: 2px;
+      }
+      .report-title {
+        font-size: 22px; font-weight: 800;
+        color: white; letter-spacing: -0.02em;
+        margin-bottom: 6px;
+      }
+      .report-url {
+        font-size: 13px; font-weight: 600;
+        color: #818cf8;
+        font-family: monospace;
+      }
+      .report-meta {
+        display: flex; gap: 20px; margin-top: 14px;
+        flex-wrap: wrap;
+      }
+      .meta-chip {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        padding: 5px 12px;
+        font-size: 10px; font-weight: 600;
+        color: rgba(255,255,255,0.6);
+      }
+      .meta-chip strong {
+        color: rgba(255,255,255,0.9);
+        font-weight: 700;
+      }
 
-    .page { padding: 40px 44px; max-width: 794px; margin: 0 auto; }
+      /* ─── SECTION ─── */
+      .section {
+        margin-bottom: 24px;
+        border: 1px solid #e5e7eb;
+        border-radius: 16px;
+        overflow: hidden;
+      }
+      .section-header {
+        background: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 12px 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .section-title {
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #6b7280;
+      }
+      .section-body { padding: 18px; }
 
-    /* ─── HEADER ─── */
-    .header {
-      background: linear-gradient(135deg, #0f0f1a 0%, #1e1b4b 50%, #0f172a 100%);
-      border-radius: 20px;
-      padding: 32px 36px;
-      margin-bottom: 28px;
-      position: relative;
-      overflow: hidden;
-    }
-    .header::before {
-      content: '';
-      position: absolute;
-      top: -40px; right: -40px;
-      width: 200px; height: 200px;
-      background: radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%);
-      border-radius: 50%;
-    }
-    .header-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 20px;
-    }
-    .brand {
-      display: flex; align-items: center; gap: 10px;
-    }
-    .brand-icon {
-      width: 36px; height: 36px;
-      background: linear-gradient(135deg, #6366f1, #8b5cf6);
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .brand-name {
-      font-size: 15px; font-weight: 800;
-      color: white; letter-spacing: -0.02em;
-    }
-    .brand-sub {
-      font-size: 10px; font-weight: 500;
-      color: rgba(255,255,255,0.5);
-      text-transform: uppercase; letter-spacing: 0.08em;
-    }
-    .score-badge {
-      background: rgba(255,255,255,0.08);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 16px;
-      padding: 12px 20px;
-      text-align: center;
-    }
-    .score-number {
-      font-size: 36px; font-weight: 900; color: ${overallColor};
-      line-height: 1;
-    }
-    .score-label {
-      font-size: 10px; font-weight: 700;
-      color: rgba(255,255,255,0.5);
-      text-transform: uppercase; letter-spacing: 0.1em;
-      margin-top: 4px;
-    }
-    .score-grade {
-      font-size: 11px; font-weight: 700;
-      color: ${overallColor};
-      margin-top: 2px;
-    }
-    .report-title {
-      font-size: 22px; font-weight: 800;
-      color: white; letter-spacing: -0.02em;
-      margin-bottom: 6px;
-    }
-    .report-url {
-      font-size: 13px; font-weight: 600;
-      color: #818cf8;
-      font-family: monospace;
-    }
-    .report-meta {
-      display: flex; gap: 20px; margin-top: 14px;
-      flex-wrap: wrap;
-    }
-    .meta-chip {
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px;
-      padding: 5px 12px;
-      font-size: 10px; font-weight: 600;
-      color: rgba(255,255,255,0.6);
-    }
-    .meta-chip strong {
-      color: rgba(255,255,255,0.9);
-      font-weight: 700;
-    }
+      /* ─── STATS ROW ─── */
+      .stats-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      .stat-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 14px;
+        text-align: center;
+      }
+      .stat-number {
+        font-size: 28px; font-weight: 900;
+        line-height: 1;
+      }
+      .stat-label {
+        font-size: 10px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.06em;
+        color: #9ca3af; margin-top: 4px;
+      }
 
-    /* ─── SECTION ─── */
-    .section {
-      margin-bottom: 24px;
-      border: 1px solid #e5e7eb;
-      border-radius: 16px;
-      overflow: hidden;
-    }
-    .section-header {
-      background: #f9fafb;
-      border-bottom: 1px solid #e5e7eb;
-      padding: 12px 18px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .section-title {
-      font-size: 11px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #6b7280;
-    }
-    .section-body { padding: 18px; }
+      /* ─── HEALTH MSG ─── */
+      .health-msg {
+        background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+        border: 1px solid #bbf7d0;
+        border-radius: 14px;
+        padding: 14px 18px;
+        margin-bottom: 24px;
+        font-size: 12px;
+        color: #166534;
+        font-weight: 500;
+        line-height: 1.6;
+      }
 
-    /* ─── STATS ROW ─── */
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-    .stat-card {
-      border: 1px solid #e5e7eb;
-      border-radius: 14px;
-      padding: 14px;
-      text-align: center;
-    }
-    .stat-number {
-      font-size: 28px; font-weight: 900;
-      line-height: 1;
-    }
-    .stat-label {
-      font-size: 10px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: 0.06em;
-      color: #9ca3af; margin-top: 4px;
-    }
+      /* ─── METRICS GRID ─── */
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0 32px;
+      }
 
-    /* ─── HEALTH MSG ─── */
-    .health-msg {
-      background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
-      border: 1px solid #bbf7d0;
-      border-radius: 14px;
-      padding: 14px 18px;
-      margin-bottom: 24px;
-      font-size: 12px;
-      color: #166534;
-      font-weight: 500;
-      line-height: 1.6;
-    }
-
-    /* ─── METRICS GRID ─── */
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0 32px;
-    }
-
-    /* ─── FOOTER ─── */
-    .footer {
-      margin-top: 28px;
-      border-top: 1px solid #e5e7eb;
-      padding-top: 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 10px;
-      color: #9ca3af;
-    }
-    .footer strong { color: #4f46e5; }
-
-    /* ─── PRINT BUTTON (screen only) ─── */
-    .print-btn {
-      display: block;
-      margin: 0 auto 24px;
-      padding: 12px 28px;
-      background: linear-gradient(135deg, #4f46e5, #7c3aed);
-      color: white;
-      font-size: 14px;
-      font-weight: 700;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      letter-spacing: -0.01em;
-    }
-    .print-btn:hover { opacity: 0.9; }
-  </style>
-</head>
-<body>
-  <div class="page">
-
-    <!-- Print / Save button (hidden on print) -->
-    <div class="no-print" style="text-align:center;margin-bottom:20px;">
-      <button class="print-btn" onclick="window.print()">⬇ Save as PDF / Print</button>
-    </div>
-
-    <!-- ── HEADER ── -->
-    <div class="header">
-      <div class="header-top">
-        <div>
-          <div class="brand">
-            <div class="brand-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      /* ─── FOOTER ─── */
+      .footer {
+        margin-top: 28px;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 10px;
+        color: #9ca3af;
+      }
+      .footer strong { color: #4f46e5; }
+    </style>
+    <div class="pdf-root">
+      <!-- ── HEADER ── -->
+      <div class="header">
+        <div class="header-top">
+          <div>
+            <div class="brand">
+              <div class="brand-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+              </div>
+              <div>
+                <div class="brand-name">MENTOR DOCKS</div>
+                <div class="brand-sub">AI Design Intelligence</div>
+              </div>
             </div>
-            <div>
-              <div class="brand-name">MENTOR DOCKS</div>
-              <div class="brand-sub">AI Design Intelligence</div>
+            <div style="margin-top:16px;">
+              <div class="report-title">Audit Report</div>
+              <div class="report-url">${scan.url}</div>
+            </div>
+            <div class="report-meta">
+              <div class="meta-chip">Generated: <strong>${generatedDate}</strong></div>
+              <div class="meta-chip">Scan Date: <strong>${scan.date}</strong></div>
+              <div class="meta-chip">Status: <strong>Completed</strong></div>
             </div>
           </div>
-          <div style="margin-top:16px;">
-            <div class="report-title">Audit Report</div>
-            <div class="report-url">${scan.url}</div>
-          </div>
-          <div class="report-meta">
-            <div class="meta-chip">Generated: <strong>${generatedDate}</strong></div>
-            <div class="meta-chip">Scan Date: <strong>${scan.date}</strong></div>
-            <div class="meta-chip">Status: <strong>Completed</strong></div>
+          <div class="score-badge">
+            <div class="score-number">${scan.score}</div>
+            <div class="score-label">Overall</div>
+            <div class="score-grade">${getScoreLabel(scan.score)}</div>
           </div>
         </div>
-        <div class="score-badge">
-          <div class="score-number">${scan.score}</div>
-          <div class="score-label">Overall</div>
-          <div class="score-grade">${getScoreLabel(scan.score)}</div>
+      </div>
+
+      <!-- ── HEALTH MESSAGE ── -->
+      <div class="health-msg">
+        <strong>AI Assessment:</strong> ${scan.healthMessage}
+      </div>
+
+      <!-- ── ISSUE SUMMARY ── -->
+      <div class="stats-row">
+        <div class="stat-card" style="border-color:#fecaca;background:#fef2f2;">
+          <div class="stat-number" style="color:#ef4444;">${criticalCount}</div>
+          <div class="stat-label" style="color:#ef4444;">Critical</div>
+        </div>
+        <div class="stat-card" style="border-color:#fde68a;background:#fffbeb;">
+          <div class="stat-number" style="color:#f59e0b;">${mediumCount}</div>
+          <div class="stat-label" style="color:#f59e0b;">Medium</div>
+        </div>
+        <div class="stat-card" style="border-color:#bfdbfe;background:#eff6ff;">
+          <div class="stat-number" style="color:#3b82f6;">${minorCount}</div>
+          <div class="stat-label" style="color:#3b82f6;">Minor</div>
         </div>
       </div>
-    </div>
 
-    <!-- ── HEALTH MESSAGE ── -->
-    <div class="health-msg">
-      <strong>AI Assessment:</strong> ${scan.healthMessage}
-    </div>
-
-    <!-- ── ISSUE SUMMARY ── -->
-    <div class="stats-row">
-      <div class="stat-card" style="border-color:#fecaca;background:#fef2f2;">
-        <div class="stat-number" style="color:#ef4444;">${criticalCount}</div>
-        <div class="stat-label" style="color:#ef4444;">Critical</div>
-      </div>
-      <div class="stat-card" style="border-color:#fde68a;background:#fffbeb;">
-        <div class="stat-number" style="color:#f59e0b;">${mediumCount}</div>
-        <div class="stat-label" style="color:#f59e0b;">Medium</div>
-      </div>
-      <div class="stat-card" style="border-color:#bfdbfe;background:#eff6ff;">
-        <div class="stat-number" style="color:#3b82f6;">${minorCount}</div>
-        <div class="stat-label" style="color:#3b82f6;">Minor</div>
-      </div>
-    </div>
-
-    <!-- ── SCORE METRICS ── -->
-    <div class="section">
-      <div class="section-header">
-        <span class="section-title">📊 Score Metrics — All 8 Crawlers</span>
-      </div>
-      <div class="section-body">
-        <div class="metrics-grid">
-          ${metricsRows}
+      <!-- ── SCORE METRICS ── -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">📊 Score Metrics — All 8 Crawlers</span>
+        </div>
+        <div class="section-body">
+          <div class="metrics-grid">
+            ${metricsRows}
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- ── IDENTIFIED ISSUES ── -->
-    <div class="section">
-      <div class="section-header">
-        <span class="section-title">⚠ Identified Issues (${scan.problems.length})</span>
+      <!-- ── IDENTIFIED ISSUES ── -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">⚠ Identified Issues (${scan.problems.length})</span>
+        </div>
+        <div class="section-body">
+          ${problemsHtml}
+        </div>
       </div>
-      <div class="section-body">
-        ${problemsHtml}
+
+      <!-- ── RECOMMENDATIONS ── -->
+      <div class="section">
+        <div class="section-header">
+          <span class="section-title">✦ AI-Powered Recommendations (${scan.recommendations.length})</span>
+        </div>
+        <div class="section-body">
+          ${recsHtml}
+        </div>
+      </div>
+
+      <!-- ── FOOTER ── -->
+      <div class="footer">
+        <span>Generated by <strong>Mentor Docks AI Studio</strong></span>
+        <span>${scan.url} · Score: <strong style="color:#4f46e5;">${scan.score}/100</strong></span>
+        <span>Confidential · ${generatedDate}</span>
       </div>
     </div>
-
-    <!-- ── RECOMMENDATIONS ── -->
-    <div class="section">
-      <div class="section-header">
-        <span class="section-title">✦ AI-Powered Recommendations (${scan.recommendations.length})</span>
-      </div>
-      <div class="section-body">
-        ${recsHtml}
-      </div>
-    </div>
-
-    <!-- ── FOOTER ── -->
-    <div class="footer">
-      <span>Generated by <strong>Mentor Docks AI Studio</strong></span>
-      <span>${scan.url} · Score: <strong style="color:#4f46e5;">${scan.score}/100</strong></span>
-      <span>Confidential · ${generatedDate}</span>
-    </div>
-  </div>
-
-  <script>
-    // Auto-trigger print dialog immediately
-    window.onload = () => window.print();
-  </script>
-</body>
-</html>
   `;
 
-  // Open in a new window and trigger print
-  const win = window.open("", "_blank", "width=900,height=700");
-  if (!win) {
-    alert("Please allow popups for this site to download the PDF report.");
-    return;
+  document.body.appendChild(container);
+
+  try {
+    if (document.fonts && document.fonts.ready) {
+      await document.fonts.ready;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const rootElement = container.querySelector(".pdf-root") as HTMLElement;
+    const canvas = await html2canvas(rootElement, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      windowWidth: 794
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4"
+    });
+
+    const imgWidth = 210;
+    const pageHeight = 297;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    const sanitizedUrl = scan.url.replace(/^https?:\/\//, "").replace(/[^a-zA-Z0-9.-]/g, "_");
+    const filename = `Mentor_Docks_Audit_Report_${sanitizedUrl}.pdf`;
+    pdf.save(filename);
+  } finally {
+    document.body.removeChild(container);
   }
-  win.document.write(html);
-  win.document.close();
 }
+
