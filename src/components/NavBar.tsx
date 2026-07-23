@@ -26,9 +26,8 @@ export default function NavBar({
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
-  // Logo URL hotlinked from the prompt
-  const logoUrl =
-    "https://lh3.googleusercontent.com/aida-public/AB6AXuALcHXC9xT6jdK7UPxIJIk2IfA0AAA6k-DLqQA3_X4BwAqp9b7-GCFs2mGawo6YoIc85-3EOTR7RzZiW2I_7UeYvoMNtZc8jaP4jGb_d9FSl_Fm7LYy0DIHYcHVfJxaSCSqoarh80U8nfdyaVa_0D62oJASq-4HH8CdOZn4UBizjYqWaPFca__0RtBjCcuQeAMUY_3k6x0mZnXl6WaU1czl3TbELp3lEk0-Pq5JQB-cg1gQfieceORwuIEOxCWAILDPaAyZPglGt0o";
+  // Official clean circular brand logo
+  const logoUrl = "/logo.png";
 
   const notifications = [
     { id: 1, text: "Audit completed successfully", time: "10m ago", read: false },
@@ -47,9 +46,8 @@ export default function NavBar({
         >
           <img
             alt="MENTOR DOCKS Logo"
-            className="h-8 w-8 rounded object-contain transition-transform group-hover:scale-110"
+            className="h-8 w-8 object-contain transition-transform group-hover:scale-110 drop-shadow-sm"
             src={logoUrl}
-            referrerPolicy="no-referrer"
           />
           <span className="font-display text-lg md:text-xl font-bold text-[#1A1A1A] dark:text-[#E2E8F0] tracking-tight">
             MENTOR DOCKS

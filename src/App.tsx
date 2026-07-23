@@ -209,9 +209,8 @@ export default function App() {
     }, 100);
   };
 
-  // Hotlinked brand logo
-  const logoUrl =
-    "https://lh3.googleusercontent.com/aida-public/AB6AXuALcHXC9xT6jdK7UPxIJIk2IfA0AAA6k-DLqQA3_X4BwAqp9b7-GCFs2mGawo6YoIc85-3EOTR7RzZiW2I_7UeYvoMNtZc8jaP4jGb_d9FSl_Fm7LYy0DIHYcHVfJxaSCSqoarh80U8nfdyaVa_0D62oJASq-4HH8CdOZn4UBizjYqWaPFca__0RtBjCcuQeAMUY_3k6x0mZnXl6WaU1czl3TbELp3lEk0-Pq5JQB-cg1gQfieceORwuIEOxCWAILDPaAyZPglGt0o";
+  // Official clean circular brand logo
+  const logoUrl = "/logo.png";
 
   return (
     <div className="min-h-screen bg-[#F0F2F5] dark:bg-[#0A0B10] text-[#1A1A1A] dark:text-[#E2E8F0] font-sans relative overflow-x-hidden selection:bg-indigo-100 dark:selection:bg-indigo-950/40 selection:text-indigo-900 dark:selection:text-indigo-200 transition-colors duration-300">
@@ -437,9 +436,8 @@ export default function App() {
               <div className="flex items-center gap-3 mb-6">
                 <img
                   alt="MENTOR DOCKS Logo"
-                  className="h-6 w-6 rounded object-contain"
+                  className="h-6 w-6 object-contain transition-transform hover:scale-105 drop-shadow-sm"
                   src={logoUrl}
-                  referrerPolicy="no-referrer"
                 />
                 <span className="font-display text-lg font-bold text-[#1A1A1A] dark:text-[#E2E8F0]">MENTOR DOCKS</span>
               </div>
