@@ -11,10 +11,11 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
-// Debug middleware for API requests
-app.use((req, res, next) => {
+// Debug middleware for API requests + ensure DB is ready before handlers run
+app.use(async (req, res, next) => {
   if (req.url.startsWith("/api/")) {
     console.log(`[API] ${req.method} ${req.url}`);
+    (req as any).dbReady = pool ? await ensureDatabase() : false;
   }
   next();
 });
@@ -45,14 +46,33 @@ if (process.env.GEMINI_API_KEY) {
 // Initialize PostgreSQL Connection Pool
 const { Pool } = pg;
 let pool: any = null;
+let dbReady = false;
+let dbInitPromise: Promise<void> | null = null;
 
-if (process.env.DATABASE_URL) {
+function getDatabaseUrl(): string | undefined {
+  const url = process.env.DATABASE_URL?.trim();
+  if (!url) return undefined;
+
+  // Neon requires SSL; append sslmode if missing from the connection string.
+  if (url.includes("neon.tech") && !url.includes("sslmode=")) {
+    return `${url}${url.includes("?") ? "&" : "?"}sslmode=require`;
+  }
+
+  return url;
+}
+
+const databaseUrl = getDatabaseUrl();
+if (databaseUrl) {
   try {
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: databaseUrl,
       ssl: {
         rejectUnauthorized: false
-      }
+      },
+      // Serverless functions should keep a single short-lived connection.
+      max: process.env.VERCEL ? 1 : 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
     });
     console.log("PostgreSQL Pool initialized with DATABASE_URL.");
   } catch (err) {
@@ -62,13 +82,18 @@ if (process.env.DATABASE_URL) {
   console.warn("DATABASE_URL environment variable is missing. Running in in-memory mode.");
 }
 
-// Automatically create tables on startup
+function isDbAvailable(req: any): boolean {
+  return Boolean(pool && req.dbReady);
+}
+
+// Automatically create tables on first use
 async function initDatabase() {
   if (!pool) return;
+
+  const client = await pool.connect();
   try {
-    const client = await pool.connect();
-    console.log("Connected to Neon PostgreSQL database. Checking tables...");
-    
+    console.log("Connected to PostgreSQL database. Checking tables...");
+
     // Create Users table
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -111,15 +136,33 @@ async function initDatabase() {
       );
     `);
 
+    dbReady = true;
     console.log("Database tables verified/created successfully.");
+  } finally {
     client.release();
-  } catch (err) {
-    console.error("Error during database schema initialization:", err);
   }
 }
 
-// Kick off database table creation
-initDatabase();
+async function ensureDatabase(): Promise<boolean> {
+  if (!pool) return false;
+  if (dbReady) return true;
+
+  if (!dbInitPromise) {
+    dbInitPromise = initDatabase().catch((err) => {
+      dbInitPromise = null;
+      dbReady = false;
+      console.error("Error during database schema initialization:", err);
+      throw err;
+    });
+  }
+
+  try {
+    await dbInitPromise;
+    return dbReady;
+  } catch {
+    return false;
+  }
+}
 
 // In-memory fallback stores for when user is anonymous (not logged in) or DB is unavailable
 const anonymousProjects: any[] = [
@@ -185,7 +228,7 @@ app.post("/api/auth/signup", async (req: any, res: any) => {
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    if (pool) {
+    if (isDbAvailable(req)) {
       // Check if user already exists
       const userCheck = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
       if (userCheck.rows.length > 0) {
@@ -234,7 +277,7 @@ app.post("/api/auth/login", async (req: any, res: any) => {
   }
 
   try {
-    if (pool) {
+    if (isDbAvailable(req)) {
       const result = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
       if (result.rows.length === 0) {
         return res.status(401).json({ error: "Invalid email or password" });
@@ -279,7 +322,7 @@ app.post("/api/auth/login", async (req: any, res: any) => {
 // Get Current User Info
 app.get("/api/auth/me", authenticateToken, async (req: any, res: any) => {
   try {
-    if (pool) {
+    if (isDbAvailable(req)) {
       const result = await pool.query("SELECT id, email, name FROM users WHERE id = $1", [req.user.userId]);
       if (result.rows.length === 0) {
         return res.status(404).json({ error: "User not found" });
@@ -305,7 +348,7 @@ app.get("/api/auth/me", authenticateToken, async (req: any, res: any) => {
 // GET user's saved projects
 app.get("/api/projects", optionalAuthenticateToken, async (req: any, res: any) => {
   try {
-    if (req.user && pool) {
+    if (req.user && isDbAvailable(req)) {
       const result = await pool.query(
         "SELECT id, name, url, score, last_scan as \"lastScan\", issues, category FROM projects WHERE user_id = $1 ORDER BY created_at DESC",
         [req.user.userId]
@@ -330,7 +373,7 @@ app.post("/api/projects", optionalAuthenticateToken, async (req: any, res: any) 
   }
 
   try {
-    if (req.user && pool) {
+    if (req.user && isDbAvailable(req)) {
       const result = await pool.query(
         "INSERT INTO projects (user_id, name, url, score, last_scan, issues, category) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, name, url, score, last_scan as \"lastScan\", issues, category",
         [req.user.userId, name, url, score || 80, lastScan || "Just now", issues || 0, category || "Other"]
@@ -361,7 +404,7 @@ app.post("/api/projects", optionalAuthenticateToken, async (req: any, res: any) 
 // GET saved scan history
 app.get("/api/scans", optionalAuthenticateToken, async (req: any, res: any) => {
   try {
-    if (req.user && pool) {
+    if (req.user && isDbAvailable(req)) {
       const result = await pool.query(
         "SELECT id, url, score, health_message as \"healthMessage\", problems, recommendations, metrics, date FROM scans WHERE user_id = $1 ORDER BY created_at DESC",
         [req.user.userId]
@@ -385,7 +428,7 @@ app.post("/api/scans", optionalAuthenticateToken, async (req: any, res: any) => 
   }
 
   try {
-    if (req.user && pool) {
+    if (req.user && isDbAvailable(req)) {
       const result = await pool.query(
         "INSERT INTO scans (user_id, url, score, health_message, problems, recommendations, metrics, date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, url, score, health_message as \"healthMessage\", problems, recommendations, metrics, date",
         [
@@ -424,7 +467,7 @@ app.post("/api/scans", optionalAuthenticateToken, async (req: any, res: any) => 
 app.delete("/api/scans/:id", optionalAuthenticateToken, async (req: any, res: any) => {
   const { id } = req.params;
   try {
-    if (req.user && pool) {
+    if (req.user && isDbAvailable(req)) {
       await pool.query("DELETE FROM scans WHERE id = $1 AND user_id = $2", [id, req.user.userId]);
       return res.status(200).json({ message: "Scan deleted successfully" });
     } else {
@@ -834,7 +877,7 @@ Generate a JSON object matching this schema:
 
   try {
     // If user is authenticated, save directly into PostgreSQL DB
-    if (req.user && pool) {
+    if (req.user && isDbAvailable(req)) {
       const dbResult = await pool.query(
         "INSERT INTO scans (user_id, url, score, health_message, problems, recommendations, metrics, date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, url, score, health_message as \"healthMessage\", problems, recommendations, metrics, date",
         [
