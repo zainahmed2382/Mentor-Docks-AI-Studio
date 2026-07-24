@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { WebsiteScan } from "../types";
 import { User as ApiUser } from "../lib/api";
+import UrlAutocompleteInput from "./UrlAutocompleteInput";
 
 interface LandingPageProps {
   onStartScan: (url: string) => void;
@@ -193,19 +194,17 @@ export default function LandingPage({
                   <label className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 block">
                     Target Website URL
                   </label>
-                  <div className="w-full bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl p-2.5 flex items-center focus-within:bg-white dark:focus-within:bg-[#131520] focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-950/40 transition-all">
-                    <Globe className="text-gray-400 dark:text-gray-500 h-5 w-5 mx-3 shrink-0" />
-                    <input
-                      type="text"
-                      value={url}
-                      onChange={(e) => {
-                        setUrl(e.target.value);
-                        setError("");
-                      }}
-                      className="w-full bg-transparent border-none text-[#1A1A1A] dark:text-slate-100 font-mono text-sm focus:ring-0 focus:outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
-                      placeholder="e.g., https://stripe.com or customdomain.org"
-                    />
-                  </div>
+                  <UrlAutocompleteInput
+                    value={url}
+                    onChange={(val) => {
+                      setUrl(val);
+                      setError("");
+                    }}
+                    onStartScan={onStartScan}
+                    scanHistory={scanHistory}
+                    onSelectScan={onSelectScan}
+                    placeholder="e.g., https://stripe.com or customdomain.org"
+                  />
                   {error && <p className="text-rose-500 text-xs font-semibold mt-2 pl-2">{error}</p>}
                 </div>
 
@@ -477,23 +476,23 @@ export default function LandingPage({
             onSubmit={handleSubmit}
             className="w-full bg-white dark:bg-[#131520] border border-gray-200 dark:border-slate-800 rounded-[32px] p-2 flex flex-col md:flex-row gap-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.05)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.4)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] hover:border-gray-300 dark:hover:border-slate-700 transition-all duration-300"
           >
-            <div className="flex-grow flex items-center bg-gray-50 dark:bg-slate-900 rounded-[24px] px-5 py-3.5 border border-gray-100 dark:border-slate-800 focus-within:bg-white dark:focus-within:bg-[#131520] focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-950 transition-all">
-              <Link className="text-gray-400 dark:text-gray-500 h-5 w-5 mr-3 shrink-0" />
-              <input
-                type="text"
+            <div className="flex-grow">
+              <UrlAutocompleteInput
+                id="landing-url-input"
                 value={url}
-                onChange={(e) => {
-                  setUrl(e.target.value);
+                onChange={(val) => {
+                  setUrl(val);
                   setError("");
                 }}
-                className="w-full bg-transparent border-none text-[#1A1A1A] dark:text-slate-100 font-mono text-sm focus:ring-0 focus:outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500 p-0"
+                onStartScan={onStartScan}
+                scanHistory={scanHistory}
+                onSelectScan={onSelectScan}
                 placeholder="https://yourwebsite.com or domain.com"
-                id="landing-url-input"
               />
             </div>
             <button
               type="submit"
-              className="bg-[#1A1A1A] dark:bg-indigo-600 text-white hover:bg-black dark:hover:bg-indigo-500 font-sans font-bold text-sm px-8 py-4 rounded-[24px] hover:scale-[1.02] active:scale-98 transition-transform duration-200 whitespace-nowrap cursor-pointer shadow-sm"
+              className="bg-[#1A1A1A] dark:bg-indigo-600 text-white hover:bg-black dark:hover:bg-indigo-500 font-sans font-bold text-sm px-8 py-4 rounded-[24px] hover:scale-[1.02] active:scale-98 transition-transform duration-200 whitespace-nowrap cursor-pointer shadow-sm shrink-0"
             >
               Scan Website
             </button>

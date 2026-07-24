@@ -14,3 +14,26 @@
                     linear-gradient(90deg, rgba(0, 0, 0, 0.02) 1px, transparent 1px);
   background-size: 24px 24px;
 }
+
+/* Custom thin scrollbar for SaaS floating panels */
+.custom-thin-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-thin-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 10px;
+}
+
+.dark .custom-thin-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(71, 85, 105, 0.4);
+}
+
+.custom-thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.5);
+}
+
