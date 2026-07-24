@@ -18,7 +18,7 @@ import SecurityPage from "./components/SecurityPage";
 import SecretsPage from "./components/SecretsPage";
 import { WebsiteScan } from "./types";
 import { initialHistory, generateProceduralScan } from "./data/mockData";
-import { api, User as ApiUser } from "./lib/api";
+import { api, User as ApiUser, getStoredUser, getToken } from "./lib/api";
 import { Heart, Globe, ShieldCheck } from "lucide-react";
 
 export default function App() {
@@ -36,7 +36,8 @@ export default function App() {
     | "security"
     | "secrets"
   >("analyze");
-  const [user, setUser] = useState<ApiUser | null>(null);
+  const [user, setUser] = useState<ApiUser | null>(() => getStoredUser());
+  const [isAuthLoading, setIsAuthLoading] = useState(() => Boolean(getToken()));
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [scanHistory, setScanHistory] = useState<WebsiteScan[]>(initialHistory);
@@ -77,19 +78,29 @@ export default function App() {
     }
   }, [user, currentView]);
 
-  // Fetch user session on startup
+  // Validate and refresh the stored session on startup
   useEffect(() => {
-    const checkSession = async () => {
+    const restoreSession = async () => {
+      const token = getToken();
+      if (!token) {
+        setIsAuthLoading(false);
+        return;
+      }
+
       try {
         const session = await api.getMe();
-        if (session && session.user) {
+        if (session?.user) {
           setUser(session.user);
+        } else if (!getStoredUser()) {
+          setUser(null);
         }
       } catch (err) {
-        console.error("Error matching session:", err);
+        console.error("Error restoring session:", err);
+      } finally {
+        setIsAuthLoading(false);
       }
     };
-    checkSession();
+    restoreSession();
   }, []);
 
   // Fetch custom data from DB whenever user auth changes

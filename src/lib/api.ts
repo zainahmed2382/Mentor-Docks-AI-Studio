@@ -1,7 +1,41 @@
 import { WebsiteScan } from "../types";
 
 const TOKEN_KEY = "mentor_auth_token";
+const USER_KEY = "mentor_auth_user";
 const API_BASE = ((import.meta as any).env?.VITE_API_URL as string) || "";
+
+interface JwtPayload {
+  userId?: number;
+  email?: string;
+  name?: string;
+  exp?: number;
+}
+
+function decodeJwtPayload(token: string): JwtPayload | null {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+  } catch {
+    return null;
+  }
+}
+
+export function isTokenExpired(token: string): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload?.exp) return true;
+  return Date.now() >= payload.exp * 1000;
+}
+
+function userFromJwt(token: string): User | null {
+  const payload = decodeJwtPayload(token);
+  if (!payload?.userId || !payload?.email) return null;
+  return {
+    id: payload.userId,
+    email: payload.email,
+    name: payload.name || payload.email.split("@")[0],
+  };
+}
 
 // Safe JSON parser: avoids the "Unexpected token" crash when the server
 // returns an HTML error page instead of JSON (e.g. backend not running).
@@ -30,10 +64,38 @@ export interface AuthResponse {
   error?: string;
 }
 
-// Token helper functions
-export const getToken = (): string | null => localStorage.getItem(TOKEN_KEY);
-export const setToken = (token: string): void => localStorage.setItem(TOKEN_KEY, token);
-export const clearToken = (): void => localStorage.removeItem(TOKEN_KEY);
+// Session helper functions
+export const getToken = (): string | null => {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_KEY);
+};
+
+export const setSession = (token: string, user: User): void => {
+  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+};
+
+export const clearSession = (): void => {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+};
+
+export const getStoredUser = (): User | null => {
+  const token = getToken();
+  if (!token || isTokenExpired(token)) {
+    if (token) clearSession();
+    return null;
+  }
+
+  try {
+    const stored = localStorage.getItem(USER_KEY);
+    if (stored) return JSON.parse(stored) as User;
+  } catch {
+    // Fall through to JWT claims
+  }
+
+  return userFromJwt(token);
+};
 
 const getHeaders = () => {
   const headers: Record<string, string> = {
@@ -58,7 +120,7 @@ export const api = {
     if (!response.ok) {
       throw new Error(data.error || "Failed to sign up");
     }
-    setToken(data.token);
+    setSession(data.token, data.user);
     return data;
   },
 
@@ -72,13 +134,18 @@ export const api = {
     if (!response.ok) {
       throw new Error(data.error || "Failed to log in");
     }
-    setToken(data.token);
+    setSession(data.token, data.user);
     return data;
   },
 
   async getMe(): Promise<{ user: User } | null> {
     const token = getToken();
     if (!token) return null;
+
+    if (isTokenExpired(token)) {
+      clearSession();
+      return null;
+    }
 
     try {
       const response = await fetch(`${API_BASE}/api/auth/me`, {
@@ -87,18 +154,23 @@ export const api = {
       });
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
-          clearToken();
+          clearSession();
         }
         return null;
       }
-      return await response.json();
+      const data = await safeJson(response);
+      if (data?.user) {
+        setSession(token, data.user);
+      }
+      return data;
     } catch {
-      return null;
+      // Network or parse errors should not destroy a valid local session
+      return getStoredUser() ? { user: getStoredUser()! } : null;
     }
   },
 
   logout(): void {
-    clearToken();
+    clearSession();
   },
 
   // Projects

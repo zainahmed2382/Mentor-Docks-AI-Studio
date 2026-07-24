@@ -241,11 +241,12 @@ app.post("/api/auth/signup", async (req: any, res: any) => {
       );
 
       const user = result.rows[0];
-      const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
+      const displayName = user.name || user.email.split("@")[0];
+      const token = jwt.sign({ userId: user.id, email: user.email, name: displayName }, JWT_SECRET, { expiresIn: "7d" });
 
       return res.status(201).json({
         token,
-        user: { id: user.id, email: user.email, name: user.name || user.email.split("@")[0] }
+        user: { id: user.id, email: user.email, name: displayName }
       });
     } else {
       // --- In-memory fallback auth (no database) ---
@@ -255,7 +256,7 @@ app.post("/api/auth/signup", async (req: any, res: any) => {
       }
       const newUser = { id: inMemoryUserIdCounter++, email, password: hashedPassword, name: name || email.split("@")[0] };
       inMemoryUsers.push(newUser);
-      const token = jwt.sign({ userId: newUser.id, email: newUser.email }, JWT_SECRET, { expiresIn: "7d" });
+      const token = jwt.sign({ userId: newUser.id, email: newUser.email, name: newUser.name }, JWT_SECRET, { expiresIn: "7d" });
       console.log(`[In-Memory Auth] New user registered: ${email}`);
       return res.status(201).json({
         token,
@@ -290,7 +291,7 @@ app.post("/api/auth/login", async (req: any, res: any) => {
         return res.status(401).json({ error: "Invalid email or password" });
       }
 
-      const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
+      const token = jwt.sign({ userId: user.id, email: user.email, name: user.name || user.email.split("@")[0] }, JWT_SECRET, { expiresIn: "7d" });
 
       return res.json({
         token,
@@ -306,7 +307,7 @@ app.post("/api/auth/login", async (req: any, res: any) => {
       if (!isPasswordValid) {
         return res.status(401).json({ error: "Invalid email or password" });
       }
-      const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
+      const token = jwt.sign({ userId: user.id, email: user.email, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
       console.log(`[In-Memory Auth] User logged in: ${email}`);
       return res.json({
         token,
