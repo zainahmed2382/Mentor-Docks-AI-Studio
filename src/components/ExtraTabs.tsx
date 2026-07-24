@@ -241,10 +241,42 @@ export function ProjectsPage({ onScanClick, projects, onSaveProject, user, onLog
 // --- INSIGHTS TAB ---
 export function InsightsPage() {
   const commonBottlenecks = [
-    { title: "Image Format Inefficiencies", rate: 70, icon: Image, color: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50 dark:bg-sky-950/20" },
-    { title: "WCAG Contrast Violations", rate: 65, icon: Palette, color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-950/20" },
-    { title: "Viewport Fluidity Bottlenecks", rate: 45, icon: Monitor, color: "text-pink-600 dark:text-pink-400", bg: "bg-pink-50 dark:bg-pink-950/20" },
-    { title: "Redundant JS Script Execution", rate: 40, icon: FileCode2, color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-950/20" },
+    {
+      title: "Image Format Inefficiencies",
+      rate: 70,
+      icon: Image,
+      color: "text-sky-600 dark:text-sky-400",
+      bg: "bg-sky-50 dark:bg-sky-950/20",
+      gradient: "from-sky-500 via-cyan-500 to-blue-500 dark:from-sky-400 dark:via-cyan-400 dark:to-blue-400",
+      glow: "shadow-[0_0_10px_rgba(56,189,248,0.25)]"
+    },
+    {
+      title: "WCAG Contrast Violations",
+      rate: 65,
+      icon: Palette,
+      color: "text-purple-600 dark:text-purple-400",
+      bg: "bg-purple-50 dark:bg-purple-950/20",
+      gradient: "from-purple-500 via-indigo-500 to-violet-500 dark:from-purple-400 dark:via-indigo-400 dark:to-violet-400",
+      glow: "shadow-[0_0_10px_rgba(192,132,252,0.25)]"
+    },
+    {
+      title: "Viewport Fluidity Bottlenecks",
+      rate: 45,
+      icon: Monitor,
+      color: "text-pink-600 dark:text-pink-400",
+      bg: "bg-pink-50 dark:bg-pink-950/20",
+      gradient: "from-pink-500 via-rose-500 to-fuchsia-500 dark:from-pink-400 dark:via-rose-400 dark:to-fuchsia-400",
+      glow: "shadow-[0_0_10px_rgba(244,114,182,0.25)]"
+    },
+    {
+      title: "Redundant JS Script Execution",
+      rate: 40,
+      icon: FileCode2,
+      color: "text-rose-600 dark:text-rose-400",
+      bg: "bg-rose-50 dark:bg-rose-950/20",
+      gradient: "from-rose-500 via-red-500 to-amber-500 dark:from-rose-400 dark:via-red-400 dark:to-amber-400",
+      glow: "shadow-[0_0_10px_rgba(251,113,133,0.25)]"
+    },
   ];
 
   return (
@@ -289,11 +321,16 @@ export function InsightsPage() {
                   </div>
                   <div className="flex-grow min-w-0">
                     <h4 className="text-xs md:text-sm font-bold text-[#1A1A1A] dark:text-slate-200 truncate leading-tight">{item.title}</h4>
-                    <div className="flex items-center gap-2 mt-2">
-                      <div className="h-1 flex-grow bg-gray-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div className={`h-full ${item.color.replace("text-", "bg-")} rounded-full`} style={{ width: `${item.rate}%` }}></div>
+                    <div className="flex items-center gap-3 mt-2.5">
+                      <div className="h-2.5 flex-grow bg-gray-200/80 dark:bg-slate-800/90 rounded-full overflow-hidden p-0.5 border border-gray-200/40 dark:border-slate-700/50 shadow-inner">
+                        <motion.div
+                          initial={{ width: "0%" }}
+                          animate={{ width: `${item.rate}%` }}
+                          transition={{ duration: 1.2, ease: "easeOut", delay: 0.15 * idx }}
+                          className={`h-full bg-gradient-to-r ${item.gradient} rounded-full ${item.glow}`}
+                        />
                       </div>
-                      <span className="text-[10px] font-mono font-bold text-gray-500 dark:text-gray-400">{item.rate}%</span>
+                      <span className="text-xs font-mono font-bold text-gray-700 dark:text-slate-300 shrink-0">{item.rate}%</span>
                     </div>
                   </div>
                 </div>
