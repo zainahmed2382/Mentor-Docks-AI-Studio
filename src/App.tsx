@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import NavBar from "./components/NavBar";
 import Sidebar from "./components/Sidebar";
@@ -17,8 +17,7 @@ import SettingsPage from "./components/SettingsPage";
 import SecurityPage from "./components/SecurityPage";
 import SecretsPage from "./components/SecretsPage";
 import { WebsiteScan } from "./types";
-import { initialHistory, generateProceduralScan } from "./data/mockData";
-import { api, User as ApiUser, getStoredUser, getToken } from "./lib/api";
+import { api, User as ApiUser, getStoredUser, getToken, AnalyzeUrlOptions } from "./lib/api";
 import { Heart, Globe, ShieldCheck } from "lucide-react";
 
 export default function App() {
@@ -40,12 +39,14 @@ export default function App() {
   const [isAuthLoading, setIsAuthLoading] = useState(() => Boolean(getToken()));
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [scanHistory, setScanHistory] = useState<WebsiteScan[]>(initialHistory);
-  const [activeScan, setActiveScan] = useState<WebsiteScan>(initialHistory[0]);
+  const [scanHistory, setScanHistory] = useState<WebsiteScan[]>([]);
+  const [activeScan, setActiveScan] = useState<WebsiteScan | null>(null);
   const [projects, setProjects] = useState<any[]>([]);
   const [isScanning, setIsScanning] = useState(false);
   const [scannedUrl, setScannedUrl] = useState("");
   const [pendingScanUrl, setPendingScanUrl] = useState<string | null>(null);
+  const scanPromiseRef = useRef<Promise<WebsiteScan> | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
@@ -112,13 +113,13 @@ export default function App() {
           setScanHistory(loadedScans);
           setActiveScan(loadedScans[0]);
         } else {
-          setScanHistory(initialHistory);
-          setActiveScan(initialHistory[0]);
+          setScanHistory([]);
+          setActiveScan(null);
         }
       } catch (err) {
         console.error("Failed to load scans from Neon DB:", err);
-        setScanHistory(initialHistory);
-        setActiveScan(initialHistory[0]);
+        setScanHistory([]);
+        setActiveScan(null);
       }
 
       try {
@@ -133,40 +134,37 @@ export default function App() {
     loadUserData();
   }, [user]);
 
-  // Handle beginning of a new scan
-  const handleStartScan = (url: string) => {
+  const handleStartScan = (url: string, options?: AnalyzeUrlOptions) => {
+    setScanError(null);
     if (!user) {
       setPendingScanUrl(url);
       setIsAuthModalOpen(true);
     } else {
       setScannedUrl(url);
+      scanPromiseRef.current = api.analyzeUrl(url, options);
       setIsScanning(true);
     }
   };
 
+  const pendingScanOptionsRef = useRef<AnalyzeUrlOptions | undefined>(undefined);
+
   // Handle finishing a scan and saving to DB
   const handleFinishedScan = async () => {
     setIsScanning(false);
-    
+
     try {
-      console.log(`Sending real-time scan request for: ${scannedUrl}`);
-      const report = await api.analyzeUrl(scannedUrl);
+      const report = await (scanPromiseRef.current ?? Promise.reject(new Error("No scan in progress")));
       setScanHistory((prev) => {
-        const filtered = prev.filter(s => s.url.toLowerCase() !== scannedUrl.toLowerCase());
+        const filtered = prev.filter((s) => s.url.toLowerCase() !== report.url.toLowerCase());
         return [report, ...filtered];
       });
       setActiveScan(report);
-    } catch (err) {
-      console.error("Analysis failed, utilizing high-quality local fallback report:", err);
-      const fallbackReport = generateProceduralScan(scannedUrl);
-      setScanHistory((prev) => {
-        const filtered = prev.filter(s => s.url.toLowerCase() !== scannedUrl.toLowerCase());
-        return [fallbackReport, ...filtered];
-      });
-      setActiveScan(fallbackReport);
+      setCurrentView("dashboard");
+    } catch (err: any) {
+      console.error("Website audit failed:", err);
+      setScanError(err?.message || "Website audit failed. Please verify the URL and try again.");
+      setCurrentView("analyze");
     }
-
-    setCurrentView("dashboard");
   };
 
   // Handle deleting a scan report

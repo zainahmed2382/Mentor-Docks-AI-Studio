@@ -52,6 +52,18 @@ async function safeJson(response: Response): Promise<any> {
   return response.json();
 }
 
+export interface AnalyzeUrlOptions {
+  scanMode?: "standard" | "deep";
+  device?: "desktop" | "mobile";
+  checks?: {
+    domStructure?: boolean;
+    contrastWcag?: boolean;
+    performanceWebVitals?: boolean;
+    securityHeaders?: boolean;
+    seoOptimization?: boolean;
+  };
+}
+
 export interface User {
   id: number;
   email: string;
@@ -236,11 +248,16 @@ export const api = {
     return response.ok;
   },
 
-  async analyzeUrl(url: string): Promise<WebsiteScan> {
+  async analyzeUrl(url: string, options: AnalyzeUrlOptions = {}): Promise<WebsiteScan> {
     const response = await fetch(`${API_BASE}/api/scans/analyze`, {
       method: "POST",
       headers: getHeaders(),
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({
+        url,
+        scanMode: options.scanMode,
+        device: options.device,
+        checks: options.checks,
+      }),
     });
     const data = await safeJson(response);
     if (!response.ok) {
