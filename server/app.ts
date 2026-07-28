@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 import pg from "pg";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { runWebsiteAudit } from "./server/audit/index.ts";
+import { runWebsiteAudit } from "./audit/index.ts";
 
 dotenv.config();
 
