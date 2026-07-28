@@ -6,6 +6,7 @@ import LandingPage from "./components/LandingPage";
 import DashboardPage from "./components/DashboardPage";
 import ScanningAnimation from "./components/ScanningAnimation";
 import AuthModal from "./components/AuthModal";
+import MentorMascot from "./components/MentorMascot";
 import { ProjectsPage, InsightsPage } from "./components/ExtraTabs";
 import DetailedAnalysisPage from "./components/DetailedAnalysisPage";
 import ScanHistoryPage from "./components/ScanHistoryPage";
@@ -435,6 +436,29 @@ export default function App() {
           }
         }}
       />
+
+      {/* Floating Mentor AI Companion Badge */}
+      {!isAuthModalOpen && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.8, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => {
+            if (!user) {
+              setIsAuthModalOpen(true);
+            }
+          }}
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-3 py-2 rounded-full bg-slate-900/90 dark:bg-[#131520]/90 border border-slate-700/60 dark:border-indigo-500/30 shadow-[0_10px_30px_rgba(0,0,0,0.3)] backdrop-blur-md cursor-pointer group transition-all"
+          id="floating-mascot-btn"
+          title="Mentor AI Companion"
+        >
+          <MentorMascot state="idle" size="sm" className="w-8 h-8 shrink-0" />
+          <span className="text-xs font-semibold text-slate-200 dark:text-slate-100 hidden sm:inline-block pr-1 group-hover:text-indigo-400 transition-colors">
+            Mentor AI
+          </span>
+        </motion.button>
+      )}
 
       {/* Footer component - only visible when logged out */}
       {!user && (

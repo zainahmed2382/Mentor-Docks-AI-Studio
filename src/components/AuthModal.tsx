@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Mail, Lock, User, Sparkles, CheckCircle2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { api, User as ApiUser } from "../lib/api";
+import MentorMascot, { MascotState } from "./MentorMascot";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -19,6 +20,17 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isScanPending }:
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [activeField, setActiveField] = useState<"name" | "email" | "password" | null>(null);
+
+  const getMascotState = (): MascotState => {
+    if (isLoading) return "scanning";
+    if (successMessage) return "success";
+    if (errorMessage) return "error";
+    if (activeField === "password") return showPassword ? "show-password" : "password";
+    if (activeField === "name") return "name";
+    if (activeField === "email") return "email";
+    return "idle";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,6 +80,7 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isScanPending }:
     setEmail("");
     setPassword("");
     setName("");
+    setActiveField(null);
   };
 
   return (
@@ -98,23 +111,28 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isScanPending }:
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-teal-50/50 dark:bg-teal-950/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
 
             {/* Header */}
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100/50 dark:border-indigo-900/40 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-2">
-                  <Sparkles className="h-3 w-3 animate-pulse" /> Mentor Intelligence
-                </span>
-                <h3 className="font-display text-2xl font-bold text-gray-900 dark:text-slate-100 tracking-tight">
-                  {isSignUp ? "Create Account" : "Welcome Back"}
-                </h3>
-                <p className="font-sans text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {isSignUp
-                    ? "Register to save audited portfolios & view global insights."
-                    : "Log in to access your secure design scan history."}
-                </p>
+            <div className="flex justify-between items-start mb-6 gap-3">
+              <div className="flex items-start gap-3.5">
+                <div className="pt-1 shrink-0">
+                  <MentorMascot state={getMascotState()} size="sm" />
+                </div>
+                <div>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100/50 dark:border-indigo-900/40 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-2">
+                    <Sparkles className="h-3 w-3 animate-pulse" /> Mentor Intelligence
+                  </span>
+                  <h3 className="font-display text-2xl font-bold text-gray-900 dark:text-slate-100 tracking-tight">
+                    {isSignUp ? "Create Account" : "Welcome Back"}
+                  </h3>
+                  <p className="font-sans text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {isSignUp
+                      ? "Register to save audited portfolios & view global insights."
+                      : "Log in to access your secure design scan history."}
+                  </p>
+                </div>
               </div>
               <button
                 onClick={onClose}
-                className="h-8 w-8 rounded-full border border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/40 hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer"
+                className="h-8 w-8 rounded-full border border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-900/40 hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer shrink-0"
                 id="auth-modal-close"
               >
                 <X className="h-4 w-4" />
@@ -172,6 +190,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isScanPending }:
                       placeholder="Jane Doe"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
+                      onFocus={() => setActiveField("name")}
+                      onBlur={() => setActiveField(null)}
                       className="w-full bg-gray-50 dark:bg-slate-900 hover:bg-gray-100/50 dark:hover:bg-slate-800/50 focus:bg-white dark:focus:bg-[#0A0B10] border border-gray-200/80 dark:border-slate-800 focus:border-indigo-500 dark:focus:border-indigo-500 rounded-2xl py-3 pl-10 pr-4 text-sm text-gray-900 dark:text-slate-200 outline-none transition-all"
                       required={isSignUp}
                     />
@@ -190,6 +210,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isScanPending }:
                     placeholder="you@domain.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    onFocus={() => setActiveField("email")}
+                    onBlur={() => setActiveField(null)}
                     className="w-full bg-gray-50 dark:bg-slate-900 hover:bg-gray-100/50 dark:hover:bg-slate-800/50 focus:bg-white dark:focus:bg-[#0A0B10] border border-gray-200/80 dark:border-slate-800 focus:border-indigo-500 dark:focus:border-indigo-500 rounded-2xl py-3 pl-10 pr-4 text-sm text-gray-900 dark:text-slate-200 outline-none transition-all"
                     required
                   />
@@ -207,6 +229,8 @@ export default function AuthModal({ isOpen, onClose, onSuccess, isScanPending }:
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    onFocus={() => setActiveField("password")}
+                    onBlur={() => setActiveField(null)}
                     className="w-full bg-gray-50 dark:bg-slate-900 hover:bg-gray-100/50 dark:hover:bg-slate-800/50 focus:bg-white dark:focus:bg-[#0A0B10] border border-gray-200/80 dark:border-slate-800 focus:border-indigo-500 dark:focus:border-indigo-500 rounded-2xl py-3 pl-10 pr-10 text-sm text-gray-900 dark:text-slate-200 outline-none transition-all"
                     required
                   />
