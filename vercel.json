@@ -1,14 +1,15 @@
 {
   "buildCommand": "npm run build",
   "functions": {
-    "api/index.cjs": {
-      "maxDuration": 60
+    "api/index.ts": {
+      "maxDuration": 60,
+      "includeFiles": "server/**"
     }
   },
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "/api/index.cjs"
+      "destination": "/api/index"
     },
     {
       "source": "/((?!assets/|api/).*)",
