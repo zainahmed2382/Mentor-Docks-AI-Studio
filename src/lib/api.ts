@@ -191,10 +191,11 @@ export const api = {
       method: "GET",
       headers: getHeaders(),
     });
+    const data = await safeJson(response);
     if (!response.ok) {
-      throw new Error("Failed to fetch projects");
+      throw new Error(data?.error || "Failed to fetch projects");
     }
-    return await safeJson(response);
+    return data;
   },
 
   async saveProject(project: {
@@ -210,10 +211,11 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(project),
     });
+    const data = await safeJson(response);
     if (!response.ok) {
-      throw new Error("Failed to save project");
+      throw new Error(data?.error || "Failed to save project");
     }
-    return await safeJson(response);
+    return data;
   },
 
   // Scans
@@ -222,10 +224,11 @@ export const api = {
       method: "GET",
       headers: getHeaders(),
     });
+    const data = await safeJson(response);
     if (!response.ok) {
-      throw new Error("Failed to fetch scans");
+      throw new Error(data?.error || "Failed to fetch scans");
     }
-    return await safeJson(response);
+    return data;
   },
 
   async saveScan(scan: Omit<WebsiteScan, "id" | "status">): Promise<WebsiteScan> {
@@ -234,10 +237,11 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(scan),
     });
+    const data = await safeJson(response);
     if (!response.ok) {
-      throw new Error("Failed to save scan history");
+      throw new Error(data?.error || "Failed to save scan history");
     }
-    return await safeJson(response);
+    return data;
   },
 
   async deleteScan(id: string): Promise<boolean> {
