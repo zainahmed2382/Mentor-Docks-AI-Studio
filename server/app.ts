@@ -15,7 +15,7 @@ app.use(express.json());
 app.use(async (req, res, next) => {
   if (req.url.startsWith("/api/")) {
     console.log(`[API] ${req.method} ${req.url}`);
-    (req as any).dbReady = pool ? await ensureDatabase() : false;
+    (req as any).dbReady = (pool && !poolPermanentlyDisabled) ? await ensureDatabase() : false;
   }
   next();
 });
@@ -28,12 +28,32 @@ const { Pool } = pg;
 let pool: any = null;
 let dbReady = false;
 let dbInitPromise: Promise<void> | null = null;
+let poolPermanentlyDisabled = false;
+
+function isAuthError(err: any): boolean {
+  const code = err?.code;
+  const msg = (err?.message || "").toLowerCase();
+  return code === "28P01" ||
+    msg.includes("password authentication") ||
+    msg.includes("authentication failed") ||
+    msg.includes("no pg_hba.conf entry");
+}
+
+function disablePoolPermanently(reason: string) {
+  poolPermanentlyDisabled = true;
+  if (pool) {
+    try { pool.end().catch(() => {}); } catch (_) {}
+  }
+  pool = null;
+  dbReady = false;
+  dbInitPromise = null;
+  console.warn(`[DB] ${reason} — permanently disabled. Running in in-memory mode.`);
+}
 
 function getDatabaseUrl(): string | undefined {
   const url = process.env.DATABASE_URL?.trim();
   if (!url) return undefined;
 
-  // Neon requires SSL; append sslmode if missing from the connection string.
   if (url.includes("neon.tech") && !url.includes("sslmode=")) {
     return `${url}${url.includes("?") ? "&" : "?"}sslmode=require`;
   }
@@ -49,32 +69,50 @@ if (databaseUrl) {
       ssl: {
         rejectUnauthorized: false
       },
-      // Serverless functions should keep a single short-lived connection.
       max: process.env.VERCEL ? 1 : 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,
     });
     console.log("PostgreSQL Pool initialized with DATABASE_URL.");
+
+    pool.on("error", (err: any) => {
+      console.error("[DB] Pool-level error:", err?.message || err);
+      if (isAuthError(err)) {
+        disablePoolPermanently("Authentication error detected on pool");
+      }
+    });
+
+    (async () => {
+      try {
+        const client = await pool.connect();
+        client.release();
+        console.log("[DB] Initial connection probe succeeded.");
+      } catch (err: any) {
+        console.error("[DB] Initial connection probe failed:", err?.message || err);
+        if (isAuthError(err)) {
+          disablePoolPermanently("Authentication failed on initial probe");
+        }
+      }
+    })();
   } catch (err) {
     console.error("Failed to initialize PostgreSQL pool:", err);
+    pool = null;
   }
 } else {
   console.warn("DATABASE_URL environment variable is missing. Running in in-memory mode.");
 }
 
 function isDbAvailable(req: any): boolean {
-  return Boolean(pool && req.dbReady);
+  return Boolean(pool && !poolPermanentlyDisabled && req.dbReady);
 }
 
-// Automatically create tables on first use
 async function initDatabase() {
-  if (!pool) return;
+  if (!pool || poolPermanentlyDisabled) return;
 
   const client = await pool.connect();
   try {
     console.log("Connected to PostgreSQL database. Checking tables...");
 
-    // Create Users table
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -85,7 +123,6 @@ async function initDatabase() {
       );
     `);
 
-    // Create Projects table
     await client.query(`
       CREATE TABLE IF NOT EXISTS projects (
         id SERIAL PRIMARY KEY,
@@ -100,7 +137,6 @@ async function initDatabase() {
       );
     `);
 
-    // Create Scans table
     await client.query(`
       CREATE TABLE IF NOT EXISTS scans (
         id SERIAL PRIMARY KEY,
@@ -124,7 +160,7 @@ async function initDatabase() {
 }
 
 async function ensureDatabase(): Promise<boolean> {
-  if (!pool) return false;
+  if (!pool || poolPermanentlyDisabled) return false;
   if (dbReady) return true;
 
   if (!dbInitPromise) {
@@ -132,6 +168,9 @@ async function ensureDatabase(): Promise<boolean> {
       dbInitPromise = null;
       dbReady = false;
       console.error("Error during database schema initialization:", err);
+      if (isAuthError(err)) {
+        disablePoolPermanently("Authentication failed during schema init");
+      }
       throw err;
     });
   }
