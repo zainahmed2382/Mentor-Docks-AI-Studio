@@ -1,7 +1,7 @@
 {
   "buildCommand": "npm run build",
   "functions": {
-    "api/index.mts": {
+    "api/index.ts": {
       "maxDuration": 60,
       "includeFiles": "server/**"
     }
