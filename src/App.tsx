@@ -110,9 +110,10 @@ export default function App() {
     const loadUserData = async () => {
       try {
         const loadedScans = await api.getScans();
-        if (loadedScans && loadedScans.length > 0) {
-          setScanHistory(loadedScans);
-          setActiveScan(loadedScans[0]);
+        const safeScans = Array.isArray(loadedScans) ? loadedScans.filter(Boolean) : [];
+        if (safeScans.length > 0) {
+          setScanHistory(safeScans);
+          setActiveScan(safeScans[0]);
         } else {
           setScanHistory([]);
           setActiveScan(null);
@@ -125,7 +126,7 @@ export default function App() {
 
       try {
         const loadedProjects = await api.getProjects();
-        setProjects(loadedProjects);
+        setProjects(Array.isArray(loadedProjects) ? loadedProjects.filter(Boolean) : []);
       } catch (err) {
         console.error("Failed to load projects from Neon DB:", err);
         setProjects([]);

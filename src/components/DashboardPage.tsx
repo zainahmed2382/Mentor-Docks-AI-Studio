@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "motion/react";
-import { WebsiteScan } from "../types";
+import { WebsiteScan, PLACEHOLDER_SCAN } from "../types";
 import {
   Code2,
   MousePointerClick,
@@ -18,17 +18,22 @@ import {
 } from "lucide-react";
 
 interface DashboardPageProps {
-  activeScan: WebsiteScan;
+  activeScan: WebsiteScan | null;
   scanHistory: WebsiteScan[];
   onSelectHistoryScan: (id: string) => void;
   onNavigateToLabs?: () => void;
 }
 
 export default function DashboardPage({ activeScan, scanHistory, onSelectHistoryScan, onNavigateToLabs }: DashboardPageProps) {
+  const scan = activeScan ?? PLACEHOLDER_SCAN;
+  const metrics = scan.metrics ?? PLACEHOLDER_SCAN.metrics;
+  const score = typeof scan.score === "number" ? scan.score : 0;
+  const problems = Array.isArray(scan.problems) ? scan.problems : [];
+  const recommendations = Array.isArray(scan.recommendations) ? scan.recommendations : [];
   // Setup SVG circular progress coordinates
   const radius = 45;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (circumference * activeScan.score) / 100;
+  const strokeDashoffset = circumference - (circumference * score) / 100;
 
   // Render metric icons dynamically
   const getMetricIcon = (key: string) => {
@@ -120,7 +125,7 @@ export default function DashboardPage({ activeScan, scanHistory, onSelectHistory
           <div className="font-sans text-sm md:text-base text-gray-500 dark:text-gray-400 font-medium">
             Scanning target:{" "}
             <span className="font-mono text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-900 px-3 py-1 rounded-full border border-gray-200 dark:border-slate-800 shadow-sm font-semibold text-xs md:text-sm inline-block mt-1 md:mt-0">
-              {activeScan.url}
+              {scan.url}
             </span>
           </div>
         </div>
@@ -191,7 +196,7 @@ export default function DashboardPage({ activeScan, scanHistory, onSelectHistory
             {/* Score Numerical Text */}
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="font-display text-4xl md:text-5xl font-extrabold text-[#1A1A1A] dark:text-slate-100 tracking-tight">
-                {activeScan.score}
+                {score}
               </span>
               <span className="font-sans text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mt-0.5">
                 / 100
@@ -200,13 +205,13 @@ export default function DashboardPage({ activeScan, scanHistory, onSelectHistory
           </div>
 
           <p className="font-sans text-xs md:text-sm text-gray-600 dark:text-gray-300 mt-6 text-center max-w-[240px] leading-relaxed font-medium">
-            {activeScan.healthMessage}
+            {scan.healthMessage}
           </p>
         </div>
 
         {/* Breakdown Metric Sub-cards (Right 2 columns) */}
         <div className="lg:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
-          {Object.entries(activeScan.metrics).map(([key, value], idx) => (
+          {Object.entries(metrics).map(([key, value], idx) => (
             <motion.div
               key={key}
               initial={{ opacity: 0, y: 15 }}
@@ -253,12 +258,12 @@ export default function DashboardPage({ activeScan, scanHistory, onSelectHistory
               Problems Found
             </h2>
             <span className="bg-gray-50 dark:bg-slate-900 text-gray-700 dark:text-slate-300 border border-gray-200 dark:border-slate-800 font-sans font-bold text-xs px-3 py-1 rounded-full shadow-sm">
-              {activeScan.problems.length} Issues
+              {problems.length} Issues
             </span>
           </div>
 
           <div className="flex flex-col gap-4 max-h-[380px] overflow-y-auto pr-1">
-            {activeScan.problems.map((problem) => (
+            {problems.map((problem) => (
               <div
                 key={problem.id}
                 className="bg-gray-50/50 dark:bg-slate-900/30 border border-gray-100 dark:border-slate-800/80 rounded-[20px] p-4 flex gap-4 items-start hover:border-gray-200/80 dark:hover:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800/40 transition-all"
@@ -295,7 +300,7 @@ export default function DashboardPage({ activeScan, scanHistory, onSelectHistory
           </div>
 
           <div className="flex flex-col gap-4 max-h-[380px] overflow-y-auto pr-1 z-10">
-            {activeScan.recommendations.map((rec) => (
+            {recommendations.map((rec) => (
               <div
                 key={rec.id}
                 className="bg-white dark:bg-slate-900/60 border border-gray-200/80 dark:border-slate-800/80 hover:border-indigo-300 dark:hover:border-indigo-500 rounded-[20px] p-4 flex gap-4 items-center relative overflow-hidden group transition-all duration-300 shadow-[0_4px_15px_rgba(0,0,0,0.01)]"
@@ -358,7 +363,7 @@ export default function DashboardPage({ activeScan, scanHistory, onSelectHistory
                   key={scan.id}
                   onClick={() => onSelectHistoryScan(scan.id)}
                   className={`border-b border-gray-100 dark:border-slate-800/60 hover:bg-gray-50/50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group ${
-                    scan.id === activeScan.id ? "bg-indigo-50/30 dark:bg-indigo-950/20" : ""
+                    scan.id === activeScan?.id ? "bg-indigo-50/30 dark:bg-indigo-950/20" : ""
                   }`}
                 >
                   <td className="py-4 px-3 text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap">{scan.date}</td>

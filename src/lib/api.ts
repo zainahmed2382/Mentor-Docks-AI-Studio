@@ -2,7 +2,7 @@ import { WebsiteScan } from "../types";
 
 const TOKEN_KEY = "mentor_auth_token";
 const USER_KEY = "mentor_auth_user";
-const API_BASE = ((import.meta as any).env?.VITE_API_URL as string) || "";
+const API_BASE = ((import.meta as any).env?.VITE_API_URL as string) || (typeof window !== "undefined" ? window.location.origin : "");
 
 interface JwtPayload {
   userId?: number;
@@ -195,7 +195,7 @@ export const api = {
     if (!response.ok) {
       throw new Error(data?.error || "Failed to fetch projects");
     }
-    return data;
+    return Array.isArray(data) ? data : [];
   },
 
   async saveProject(project: {
@@ -228,7 +228,7 @@ export const api = {
     if (!response.ok) {
       throw new Error(data?.error || "Failed to fetch scans");
     }
-    return data;
+    return Array.isArray(data) ? data : [];
   },
 
   async saveScan(scan: Omit<WebsiteScan, "id" | "status">): Promise<WebsiteScan> {

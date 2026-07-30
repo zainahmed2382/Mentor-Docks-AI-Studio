@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "motion/react";
-import { WebsiteScan, ProblemItem, ScoreMetrics } from "../types";
+import { WebsiteScan, ProblemItem, ScoreMetrics, PLACEHOLDER_SCAN } from "../types";
 import {
   CodeXml,
   MonitorSmartphone,
@@ -21,19 +21,20 @@ import {
 import { downloadPdfReport } from "../lib/generatePdf";
 
 interface DetailedAnalysisPageProps {
-  activeScan: WebsiteScan;
+  activeScan: WebsiteScan | null;
 }
 
 type AnalyzerTab = "code" | "responsive" | "typography" | "color" | "accessibility" | "performance" | "seo" | "ux";
 
 export default function DetailedAnalysisPage({ activeScan }: DetailedAnalysisPageProps) {
+  const scan = activeScan ?? PLACEHOLDER_SCAN;
   const [activeTab, setActiveTab] = useState<AnalyzerTab>("ux");
   const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownloadPdf = async () => {
     setIsDownloading(true);
     try {
-      await downloadPdfReport(activeScan);
+      await downloadPdfReport(scan);
     } catch (err) {
       console.error("Error downloading PDF report:", err);
     } finally {
@@ -57,21 +58,21 @@ export default function DetailedAnalysisPage({ activeScan }: DetailedAnalysisPag
       case "ux":
         return [
           { name: "Clear Call-to-Action (CTA) placements", status: true },
-          { name: "Consistent section-by-section spacing", status: activeScan.metrics.uiUx > 80 },
+          { name: "Consistent section-by-section spacing", status: scan.metrics.uiUx > 80 },
           { name: "Logical reading hierarchy & visual anchors", status: true },
           { name: "Clean layout navigation & scrollable menus", status: true },
         ];
       case "code":
         return [
-          { name: "Semantic HTML element layout (header, footer, nav)", status: activeScan.metrics.codeQuality > 80 },
+          { name: "Semantic HTML element layout (header, footer, nav)", status: scan.metrics.codeQuality > 80 },
           { name: "Absence of inline CSS elements", status: true },
           { name: "Console errors and script integrity", status: true },
           { name: "Correct tag matching and closure validations", status: true },
         ];
       case "responsive":
         return [
-          { name: "Standard mobile viewport tag declaration", status: activeScan.metrics.responsiveness > 50 },
-          { name: "Avoidance of horizontal overflow scrollbars", status: activeScan.metrics.responsiveness > 75 },
+          { name: "Standard mobile viewport tag declaration", status: scan.metrics.responsiveness > 50 },
+          { name: "Avoidance of horizontal overflow scrollbars", status: scan.metrics.responsiveness > 75 },
           { name: "Proportional media resizing (fluid layout grids)", status: true },
           { name: "Touch target action bounds size (min 44px)", status: true },
         ];
@@ -80,33 +81,33 @@ export default function DetailedAnalysisPage({ activeScan }: DetailedAnalysisPag
           { name: "Unified typeface selection (max 3 fonts)", status: true },
           { name: "Rhythmic and proportional heading sizes (H1-H6)", status: true },
           { name: "Optimum text leading and tracking settings", status: true },
-          { name: "Readability contrast thresholds on copy texts", status: activeScan.metrics.typography > 80 },
+          { name: "Readability contrast thresholds on copy texts", status: scan.metrics.typography > 80 },
         ];
       case "color":
         return [
-          { name: "Strict conformance to contrast limits (4.5:1 ratio)", status: activeScan.metrics.colorTheme > 80 },
+          { name: "Strict conformance to contrast limits (4.5:1 ratio)", status: scan.metrics.colorTheme > 80 },
           { name: "Balanced and clean brand color hierarchy", status: true },
           { name: "Visual highlighting on clickable links and inputs", status: true },
           { name: "Aesthetic color gradients and accent consistency", status: true },
         ];
       case "accessibility":
         return [
-          { name: "Semantic HTML ARIA attributes and labels", status: activeScan.metrics.accessibility > 75 },
-          { name: "Descriptive alternative tags on image elements", status: activeScan.metrics.accessibility > 70 },
+          { name: "Semantic HTML ARIA attributes and labels", status: scan.metrics.accessibility > 75 },
+          { name: "Descriptive alternative tags on image elements", status: scan.metrics.accessibility > 70 },
           { name: "Logical keyboard tab-navigation alignments", status: true },
           { name: "Assigned screen reader readable alerts and status", status: true },
         ];
       case "performance":
         return [
-          { name: "First Contentful Paint (FCP) below 1.5 seconds", status: activeScan.metrics.performance > 80 },
-          { name: "Efficient asset payloads (raster WebP compression)", status: activeScan.metrics.performance > 70 },
+          { name: "First Contentful Paint (FCP) below 1.5 seconds", status: scan.metrics.performance > 80 },
+          { name: "Efficient asset payloads (raster WebP compression)", status: scan.metrics.performance > 70 },
           { name: "Consolidated stylesheets and scripts delivery", status: true },
-          { name: "Edge CDN static elements caching enabled", status: activeScan.metrics.performance > 60 },
+          { name: "Edge CDN static elements caching enabled", status: scan.metrics.performance > 60 },
         ];
       case "seo":
         return [
           { name: "Standard document description and title headers", status: true },
-          { name: "Social network meta assets index (OpenGraph tags)", status: activeScan.metrics.seo > 75 },
+          { name: "Social network meta assets index (OpenGraph tags)", status: scan.metrics.seo > 75 },
           { name: "Clean document index crawlable layouts", status: true },
           { name: "Robots.txt and Sitemap.xml availability indicators", status: true },
         ];
@@ -117,10 +118,10 @@ export default function DetailedAnalysisPage({ activeScan }: DetailedAnalysisPag
 
   // Select active score
   const selectedAnalyzer = analyzers.find((a) => a.id === activeTab);
-  const activeScore = selectedAnalyzer ? activeScan.metrics[selectedAnalyzer.scoreKey] : 0;
+  const activeScore = selectedAnalyzer ? scan.metrics[selectedAnalyzer.scoreKey] : 0;
 
   // Filter problems for active category
-  const activeProblems = activeScan.problems.filter((p) => {
+  const activeProblems = scan.problems.filter((p) => {
     if (activeTab === "ux" && p.category === "ux") return true;
     if (activeTab === "code" && p.category === "code") return true;
     if (activeTab === "responsive" && p.category === "responsive") return true;
@@ -133,7 +134,7 @@ export default function DetailedAnalysisPage({ activeScan }: DetailedAnalysisPag
   });
 
   // Filter recommendations for active category
-  const activeRecs = activeScan.recommendations.filter((r) => {
+  const activeRecs = scan.recommendations.filter((r) => {
     return r.category?.toLowerCase() === activeTab || r.category?.toLowerCase().includes(activeTab);
   });
 
@@ -174,7 +175,7 @@ export default function DetailedAnalysisPage({ activeScan }: DetailedAnalysisPag
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <div className="font-mono text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 px-4 py-2 rounded-2xl font-bold self-start md:self-auto">
-            Scanned Target: {activeScan.url}
+            Scanned Target: {scan.url}
           </div>
           <motion.button
             onClick={handleDownloadPdf}
@@ -208,7 +209,7 @@ export default function DetailedAnalysisPage({ activeScan }: DetailedAnalysisPag
           {analyzers.map((analyzer) => {
             const Icon = analyzer.icon;
             const isSelected = activeTab === analyzer.id;
-            const score = activeScan.metrics[analyzer.scoreKey];
+            const score = scan.metrics[analyzer.scoreKey];
             return (
               <button
                 key={analyzer.id}

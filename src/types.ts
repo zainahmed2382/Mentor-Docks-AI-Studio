@@ -36,3 +36,26 @@ export interface WebsiteScan {
   problems: ProblemItem[];
   recommendations: RecommendationItem[];
 }
+
+export const EMPTY_METRICS: ScoreMetrics = {
+  codeQuality: 0,
+  uiUx: 0,
+  responsiveness: 0,
+  typography: 0,
+  colorTheme: 0,
+  accessibility: 0,
+  performance: 0,
+  seo: 0,
+};
+
+export const PLACEHOLDER_SCAN: WebsiteScan = {
+  id: "placeholder",
+  url: "",
+  date: "",
+  score: 0,
+  status: "scanning",
+  healthMessage: "Run your first website scan to see results here.",
+  metrics: { ...EMPTY_METRICS },
+  problems: [],
+  recommendations: [],
+};
