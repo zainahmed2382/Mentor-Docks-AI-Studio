@@ -14,6 +14,19 @@ app.use(express.json());
 // Debug middleware for API requests + ensure DB is ready before handlers run
 app.use(async (req, res, next) => {
   if (req.url.startsWith("/api/")) {
+    // Strip the `path` query parameter injected by Vercel rewrite `:path*` capture,
+    // so logging, Express routing, and query handlers see the clean original URL
+    // (e.g. "/api/auth/me?path=auth%2Fme" → "/api/auth/me").
+    const originalUrl = req.originalUrl || req.url;
+    const urlObj = new URL(originalUrl, "http://localhost");
+    if (urlObj.searchParams.has("path")) {
+      urlObj.searchParams.delete("path");
+      const cleaned = urlObj.pathname + urlObj.search + urlObj.hash;
+      req.url = cleaned;
+      req.originalUrl = cleaned;
+      if ((req as any)._parsedUrl) (req as any)._parsedUrl = null;
+    }
+
     console.log(`[API] ${req.method} ${req.url}`);
     (req as any).dbReady = (pool && !poolPermanentlyDisabled) ? await ensureDatabase() : false;
   }
