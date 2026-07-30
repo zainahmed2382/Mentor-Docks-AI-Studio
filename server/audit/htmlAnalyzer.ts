@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import type { HtmlAnalysis } from "./types.ts";
+import type { HtmlAnalysis } from "./types";
 
 export function analyzeHtml(html: string): HtmlAnalysis {
   const $ = cheerio.load(html);

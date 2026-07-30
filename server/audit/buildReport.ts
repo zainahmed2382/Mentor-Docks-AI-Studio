@@ -1,4 +1,4 @@
-import type { AuditOptions, BuiltReport, RawAuditData } from "./types.ts";
+import type { AuditOptions, BuiltReport, RawAuditData } from "./types";
 
 let idCounter = 0;
 function nextId(prefix: string): string {

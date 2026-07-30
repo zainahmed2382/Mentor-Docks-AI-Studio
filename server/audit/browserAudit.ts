@@ -1,4 +1,4 @@
-import type { AuditOptions, BrowserAuditResult, LighthouseCategoryScores } from "./types.ts";
+import type { AuditOptions, BrowserAuditResult, LighthouseCategoryScores } from "./types";
 
 const CONTRAST_SCRIPT = `
 (() => {

@@ -1,5 +1,5 @@
-import { analyzeHtml } from "./htmlAnalyzer.ts";
-import type { AuditOptions, HttpCrawlResult, SecurityHeaderFindings } from "./types.ts";
+import { analyzeHtml } from "./htmlAnalyzer";
+import type { AuditOptions, HttpCrawlResult, SecurityHeaderFindings } from "./types";
 
 const SECURITY_HEADERS = [
   "content-security-policy",

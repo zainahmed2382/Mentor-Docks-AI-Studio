@@ -1,10 +1,10 @@
-import { buildAuditReport } from "./buildReport.ts";
-import { crawlWebsite } from "./httpCrawl.ts";
-import { normalizeUrl } from "./normalizeUrl.ts";
-import { runPageSpeedInsights } from "./pageSpeedInsights.ts";
-import type { AuditOptions, RawAuditData } from "./types.ts";
+import { buildAuditReport } from "./buildReport";
+import { crawlWebsite } from "./httpCrawl";
+import { normalizeUrl } from "./normalizeUrl";
+import { runPageSpeedInsights } from "./pageSpeedInsights";
+import type { AuditOptions, RawAuditData } from "./types";
 
-export type { AuditOptions } from "./types.ts";
+export type { AuditOptions } from "./types";
 
 export async function runWebsiteAudit(inputUrl: string, options: AuditOptions = {}) {
   const normalized = normalizeUrl(inputUrl);
@@ -28,9 +28,9 @@ export async function runWebsiteAudit(inputUrl: string, options: AuditOptions = 
     tasks.push(pageSpeedPromise);
   }
 
-  let browserPromise: Promise<import("./types.ts").BrowserAuditResult | null> = Promise.resolve(null);
+  let browserPromise: Promise<import("./types").BrowserAuditResult | null> = Promise.resolve(null);
   if (deep && !process.env.VERCEL) {
-    browserPromise = import("./browserAudit.ts")
+    browserPromise = import("./browserAudit")
       .then(({ runBrowserAudit }) => runBrowserAudit(crawl.finalUrl || url, { ...options, strategy }))
       .catch((err) => {
         console.warn("[Audit] Browser audit skipped:", err?.message);

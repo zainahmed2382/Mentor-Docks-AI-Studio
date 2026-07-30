@@ -1,4 +1,4 @@
-import type { CoreWebVitals, LighthouseCategoryScores, PageSpeedResult, PsiAuditItem, ScanStrategy } from "./types.ts";
+import type { CoreWebVitals, LighthouseCategoryScores, PageSpeedResult, PsiAuditItem, ScanStrategy } from "./types";
 
 const PSI_ENDPOINT = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed";
 
